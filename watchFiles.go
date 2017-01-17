@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -56,8 +57,27 @@ func watchFile(filePath string, ch chan bool) {
 }
 
 func watchFiles(files []string, ch chan bool) {
-	log.Infof("Watching changes on file: %v", strings.Join(myfiles, ", "))
-	for _, file := range myfiles {
+	toWatch := []string{}
+	// If we have a folder as file we will take all files in it.
+	for _, f := range files {
+		if info, err := os.Stat(f); err == nil && info.IsDir() {
+			fl, _ := ioutil.ReadDir(f)
+			for _, i := range fl {
+				toWatch = append(toWatch, f+"/"+i.Name())
+			}
+		} else if _, err := os.Stat(f); err == nil {
+			toWatch = append(toWatch, f)
+		} else {
+			log.Warnf("File %v doesn't exist.. skipping...", f)
+		}
+	}
+
+	if len(toWatch) == 0 {
+		log.Fatal("No files to watch... aborting")
+	}
+
+	log.Infof("Watching changes on file: %v", strings.Join(toWatch, ", "))
+	for _, file := range toWatch {
 		go func(file string) { watchFile(file, ch) }(file)
 	}
 }
