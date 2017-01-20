@@ -41,7 +41,9 @@ func watchFile(filePath string, ch chan bool) {
 	for {
 		stat, err := os.Stat(filePath)
 		if err != nil {
-			log.Errorf("Cannot Stat on file %v: %v", filePath, err)
+			log.Warnf("Cannot Stat on file %v: %v. Will retry in 10s.", filePath, err)
+			time.Sleep(10 * time.Second)
+			continue
 		}
 
 		if stat.Size() != initialStat.Size() || stat.ModTime() != initialStat.ModTime() {
